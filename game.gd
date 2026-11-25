@@ -46,6 +46,7 @@ var unlocked_titles = ["Aventureiro de Axel", "Abençoado pela Deusa Aqua"]
 var last_daily_claim = ""
 var music_enabled = true
 var bgm_player: AudioStreamPlayer
+var current_music_path = ""
 var battle_sprites: Dictionary = {}
 var battle_enemy_panel: Control
 var root: VBoxContainer
@@ -487,13 +488,23 @@ func start_background_music():
 	bgm_player = AudioStreamPlayer.new()
 	bgm_player.name = "OriginalFantasyTheme"
 	get_tree().root.add_child(bgm_player)
-	var music = load("res://assets/title_theme.wav")
-	if music is AudioStreamWAV:
-		music.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		bgm_player.stream = music
-		bgm_player.volume_db = -13.0
-		if music_enabled:
-			bgm_player.play()
+	play_music("res://assets/title_theme.wav")
+
+func play_music(path: String):
+	if bgm_player == null:
+		return
+	if current_music_path == path and bgm_player.playing:
+		return
+	var stream = load(path)
+	if stream == null:
+		return
+	current_music_path = path
+	if stream is AudioStreamWAV:
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	bgm_player.stream = stream
+	bgm_player.volume_db = -13.0
+	if music_enabled:
+		bgm_player.play()
 
 func toggle_music():
 	music_enabled = not music_enabled
@@ -506,6 +517,7 @@ func toggle_music():
 	show_home()
 
 func show_home():
+	play_music("res://assets/axel_theme.wav")
 	busy = false
 	fighting = false
 	clear_screen("KonoSuba: Another World", false)
@@ -572,6 +584,7 @@ func daily():
 	text(box, "O resgate fica disponível novamente quando o dia mudar no seu celular.", 17)
 
 func show_story():
+	play_music("res://assets/story_theme.wav")
 	clear_screen("História • Axel")
 	var box = add_section(root, "MISSÕES DA GUILDA")
 	add_character_banner(box, "DARKNESS • QUADRO DE MISSÕES", "A cruzada apresenta os trabalhos disponíveis em Axel.", 2, "res://assets/banner_story_darkness.svg", 154)
@@ -590,6 +603,7 @@ func show_story():
 		b.disabled = i > progress
 
 func show_scene(i: int):
+	play_music("res://assets/story_theme.wav")
 	clear_screen(CHAPTERS[int(i / 2)])
 	var box = add_section(root, "CENA ILUSTRADA • DIÁRIO DE AVENTURA")
 	var scene_art = "res://assets/axel_town.svg"
@@ -709,6 +723,7 @@ func start_battle(i: int):
 	battle_screen("Escolha uma habilidade.")
 
 func battle_screen(message: String):
+	play_music("res://assets/battle_theme.wav")
 	busy = false
 	battle_sprites.clear()
 	battle_enemy_panel = null
@@ -817,6 +832,7 @@ func attack(i: int, special: bool):
 	battle_screen("%s causou %d de dano. O inimigo contra-atacou." % [HEROES[i], damage])
 
 func show_banner():
+	play_music("res://assets/summon_theme.wav")
 	clear_screen("Summon 3D • Banner especial")
 	var box = add_section(root, "RITUAL DE INVOCAÇÃO")
 	add_character_banner(box, "AQUA • BÊNÇÃO DA DEUSA", "A deusa Aqua acompanha sua invocação. Boa sorte, aventureiro!", 1, "res://assets/banner_summon_aqua.svg", 174)
@@ -961,6 +977,7 @@ func build_summon_3d() -> SubViewportContainer:
 	return container
 
 func cinematic(results: Array, preview: bool):
+	play_music("res://assets/summon_theme.wav")
 	busy = true
 	clear_screen("Invocação • Ritual mágico", false)
 	var title = text(root, "KAZUMA ESTÁ PREPARANDO O ROUBO...", 25)
@@ -1019,6 +1036,7 @@ func cinematic(results: Array, preview: bool):
 	show_results(results, preview)
 
 func show_results(results: Array, preview: bool):
+	play_music("res://assets/axel_theme.wav")
 	clear_screen("Resultado da invocação")
 	var box = add_section(root, "AVENTUREIROS OBTIDOS")
 	if preview:

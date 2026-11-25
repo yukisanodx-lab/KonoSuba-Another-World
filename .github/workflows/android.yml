@@ -44,6 +44,8 @@ jobs:
           mv /tmp/godot-templates/templates/* "$HOME/.local/share/godot/export_templates/4.3.stable/"
           mkdir -p "$HOME/.config/godot"
           printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\nexport/android/debug_keystore = "%s/.android/debug.keystore"\nexport/android/debug_keystore_user = "androiddebugkey"\nexport/android/debug_keystore_pass = "android"\n' "$ANDROID_HOME" "$JAVA_HOME" "$HOME" > "$HOME/.config/godot/editor_settings-4.3.tres"
+      - name: Generate original game soundtrack
+        run: python3 tools/generate_audio.py
       - name: Import project and check scripts
         run: |
           godot --headless --editor --import --path .
