@@ -17,11 +17,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - name: Prepare Android SDK
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           mkdir -p "$HOME/.android"
           test -f "$HOME/.android/debug.keystore" || keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
       - name: Install Godot 4.3 and Android export templates
