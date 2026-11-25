@@ -231,6 +231,87 @@ func add_character_sprite(parent: Node, id: int, size: Vector2 = Vector2(150, 19
 		frame.add_child(placeholder)
 	return frame
 
+
+func add_art_panel(parent: Node, art_path: String, height: float = 160.0, caption: String = "") -> Control:
+	var frame = PanelContainer.new()
+	frame.custom_minimum_size = Vector2(0, height)
+	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	frame.add_theme_stylebox_override("panel", panel_style(Color("#1d2b4a"), GOLD))
+	parent.add_child(frame)
+	var surface = Control.new()
+	surface.custom_minimum_size = Vector2(0, height)
+	frame.add_child(surface)
+	var picture = TextureRect.new()
+	picture.texture = load(art_path)
+	picture.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_SCALE
+	picture.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	surface.add_child(picture)
+	var shade = ColorRect.new()
+	shade.color = Color(0.02, 0.04, 0.12, 0.28)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	surface.add_child(shade)
+	if not caption.is_empty():
+		var label = Label.new()
+		label.text = caption
+		label.position = Vector2(16, height - 42)
+		label.add_theme_font_size_override("font_size", 23)
+		label.add_theme_color_override("font_color", Color("#fff1d2"))
+		label.add_theme_color_override("font_outline_color", Color("#17223b"))
+		label.add_theme_constant_override("outline_size", 5)
+		surface.add_child(label)
+	return frame
+
+func add_character_banner(parent: Node, heading: String, subtitle: String, hero_id: int, art_path: String, height: float = 142.0, action_label: String = "", callback: Callable = Callable()) -> Control:
+	var banner = PanelContainer.new()
+	banner.custom_minimum_size = Vector2(0, height)
+	banner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	banner.add_theme_stylebox_override("panel", panel_style(Color("#1d2b4a"), GOLD))
+	parent.add_child(banner)
+	var surface = Control.new()
+	surface.custom_minimum_size = Vector2(0, height)
+	banner.add_child(surface)
+	var backdrop = TextureRect.new()
+	backdrop.texture = load(art_path)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_SCALE
+	backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	surface.add_child(backdrop)
+	var shade = ColorRect.new()
+	shade.color = Color(0.02, 0.04, 0.12, 0.42)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	surface.add_child(shade)
+	var margin = MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for key in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margin.add_theme_constant_override(key, 8)
+	surface.add_child(margin)
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	margin.add_child(row)
+	add_character_sprite(row, hero_id, Vector2(96, height - 18))
+	var info = VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_child(info)
+	var title_label = Label.new()
+	title_label.text = heading
+	title_label.add_theme_font_size_override("font_size", 23)
+	title_label.add_theme_color_override("font_color", Color("#fff1d2"))
+	title_label.add_theme_color_override("font_outline_color", Color("#17223b"))
+	title_label.add_theme_constant_override("outline_size", 4)
+	info.add_child(title_label)
+	var detail = Label.new()
+	detail.text = subtitle
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.add_theme_font_size_override("font_size", 16)
+	detail.add_theme_color_override("font_color", Color("#fff5df"))
+	info.add_child(detail)
+	if not action_label.is_empty() and callback.is_valid():
+		add_button(info, action_label, callback, Vector2(0, 42))
+	return banner
 func show_profile():
 	clear_screen("Perfil do aventureiro")
 	var box = add_section(root, "IDENTIDADE DO AVENTUREIRO")
@@ -291,7 +372,27 @@ func show_profile():
 func show_team_setup():
 	clear_screen("Escolha sua equipe", false)
 	var box = add_section(root, "MONTE SEU GRUPO ANTES DA AVENTURA")
+	add_character_banner(box, "KAZUMA • EQUIPE", "Escolha seus companheiros antes de partir para a missão.", 0, "res://assets/banner_team_kazuma.svg", 142)
 	text(box, "Escolha até 3 personagens. Você pode mudar a equipe depois na guilda.", 19)
+	var slots = HBoxContainer.new()
+	slots.alignment = BoxContainer.ALIGNMENT_CENTER
+	slots.add_theme_constant_override("separation", 8)
+	box.add_child(slots)
+	for slot in range(3):
+		if slot < team.size():
+			add_character_sprite(slots, int(team[slot]), Vector2(76, 86))
+		else:
+			var empty = PanelContainer.new()
+			empty.custom_minimum_size = Vector2(76, 86)
+			empty.add_theme_stylebox_override("panel", panel_style(Color("#dfd0ac"), Color("#9a805d")))
+			slots.add_child(empty)
+			var mark = Label.new()
+			mark.text = "+"
+			mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			mark.add_theme_font_size_override("font_size", 30)
+			mark.add_theme_color_override("font_color", INK)
+			empty.add_child(mark)
 	for id in owned:
 		var i = int(id)
 		var row = HBoxContainer.new()
@@ -322,7 +423,7 @@ func show_splash():
 		remove_child(child)
 		child.queue_free()
 	var bg = TextureRect.new()
-	bg.texture = GAME_COVER
+	bg.texture = load("res://assets/axel_town.svg")
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -380,11 +481,6 @@ func show_splash():
 	layout.add_child(foot)
 
 func start_from_splash():
-	var voices = DisplayServer.tts_get_voices_for_language("pt")
-	if voices.is_empty():
-		voices = DisplayServer.tts_get_voices_for_language("pt_BR")
-	if not voices.is_empty():
-		DisplayServer.tts_speak("KonoSuba: Another World", voices[0], 90, 1.08, 0.94, 1, true)
 	show_team_setup()
 
 func start_background_music():
@@ -413,40 +509,46 @@ func show_home():
 	busy = false
 	fighting = false
 	clear_screen("KonoSuba: Another World", false)
-	var intro = add_section(root, "AXEL  •  GUILDA DOS AVENTUREIROS")
-	text(intro, "Uma nova aventura começa aqui!", 25)
-
-	text(intro, "Sua jornada começa em Axel. Escolha seu destino, aventureiro!", 23)
-
-	var party_row = HBoxContainer.new()
-	party_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	party_row.add_theme_constant_override("separation", 18)
-	root.add_child(party_row)
-	for id in [1, 0, 3, 2]:
-		var card = VBoxContainer.new()
-		card.add_theme_constant_override("separation", 3)
-		party_row.add_child(card)
-		add_character_sprite(card, id, Vector2(150, 164))
-		var name = text(card, HEROES[id], 17)
-		name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-
-	var nav = add_section(root, "AVENTURA")
-	var row = HBoxContainer.new()
-	nav.add_child(row)
-	add_button(row, "✦ MODO HISTÓRIA", show_story, Vector2(0, 72))
-	add_button(row, "✧ SUMMON 3D", show_banner, Vector2(0, 72))
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(scroll)
+	var content = VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 9)
+	scroll.add_child(content)
+	var intro = add_section(content, "AXEL  •  GUILDA DOS AVENTUREIROS")
+	add_art_panel(intro, "res://assets/axel_town.svg", 124, "AXEL • CIDADE DOS AVENTUREIROS")
+	text(intro, "Bem-vindo, %s! Sua próxima aventura começa aqui." % profile_name, 19)
+	var nav = add_section(content, "ESCOLHA SEU DESTINO")
+	var row1 = HBoxContainer.new()
+	row1.add_theme_constant_override("separation", 10)
+	nav.add_child(row1)
+	add_character_banner(row1, "SUMMON", "A deusa Aqua guia suas invocações", 1, "res://assets/banner_summon_aqua.svg", 136, "INVOCAR", show_banner)
+	add_character_banner(row1, "HISTÓRIA", "Darkness apresenta as missões de Axel", 2, "res://assets/banner_story_darkness.svg", 136, "AVENTURAR-SE", show_story)
 	var row2 = HBoxContainer.new()
+	row2.add_theme_constant_override("separation", 10)
 	nav.add_child(row2)
-	add_button(row2, "PERSONAGENS", show_characters, Vector2(0, 64))
-	add_button(row2, "RECOMPENSA DIÁRIA", daily, Vector2(0, 64))
+	add_character_banner(row2, "EQUIPE", "Escolha até três aventureiros", 0, "res://assets/banner_team_kazuma.svg", 136, "EDITAR EQUIPE", show_team_setup)
+	add_character_banner(row2, "EVENTOS", "Desafios e explosões com Megumin", 3, "res://assets/banner_events_megumin.svg", 136, "VER EVENTOS", show_events)
+	var utility = add_section(content, "ATALHOS DA GUILDA")
 	var row3 = HBoxContainer.new()
-	nav.add_child(row3)
-	add_button(row3, "MEU PERFIL", show_profile, Vector2(0, 58))
-	add_button(row3, "EDITAR EQUIPE", show_team_setup, Vector2(0, 58))
+	utility.add_child(row3)
+	add_button(row3, "PERSONAGENS", show_characters, Vector2(0, 54))
+	add_button(row3, "RECOMPENSA DIÁRIA", daily, Vector2(0, 54))
 	var row4 = HBoxContainer.new()
-	nav.add_child(row4)
+	utility.add_child(row4)
+	add_button(row4, "MEU PERFIL", show_profile, Vector2(0, 52))
 	add_button(row4, "MÚSICA: LIGADA" if music_enabled else "MÚSICA: DESLIGADA", toggle_music, Vector2(0, 52))
-	text(root, "Progresso da história: %d / %d fases" % [progress, STORY.size()], 18)
+	text(content, "História: %d / %d missões concluídas" % [progress, STORY.size()], 17)
+
+func show_events():
+	clear_screen("Eventos • Axel")
+	var box = add_section(root, "EVENTO ESPECIAL DA GUILDA")
+	add_character_banner(box, "MEGUMIN • FESTIVAL DE EXPLOSÕES", "Um desafio especial está sendo preparado em Axel.", 3, "res://assets/banner_events_megumin.svg", 174)
+	text(box, "Participe das atividades diárias para receber cristais e eris.", 21)
+	text(box, "O próximo desafio de combate será adicionado em uma atualização futura.", 17)
+	add_button(box, "VER RECOMPENSA DIÁRIA", daily, Vector2(0, 58))
+	add_button(box, "VOLTAR AO LOBBY", show_home, Vector2(0, 54))
 
 func daily():
 	clear_screen("Recompensas diárias")
@@ -472,6 +574,8 @@ func daily():
 func show_story():
 	clear_screen("História • Axel")
 	var box = add_section(root, "MISSÕES DA GUILDA")
+	add_character_banner(box, "DARKNESS • QUADRO DE MISSÕES", "A cruzada apresenta os trabalhos disponíveis em Axel.", 2, "res://assets/banner_story_darkness.svg", 154)
+	text(box, "Acompanhe a aventura por cenas ilustradas originais e batalhas por turnos.", 17)
 	var sc = ScrollContainer.new()
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(sc)
@@ -488,6 +592,16 @@ func show_story():
 func show_scene(i: int):
 	clear_screen(CHAPTERS[int(i / 2)])
 	var box = add_section(root, "CENA ILUSTRADA • DIÁRIO DE AVENTURA")
+	var scene_art = "res://assets/axel_town.svg"
+	if i >= 2 and i < 5:
+		scene_art = "res://assets/battle_field.svg"
+	elif i >= 5 and i < 8:
+		scene_art = "res://assets/battle_forest.svg"
+	elif i >= 8 and i < 11:
+		scene_art = "res://assets/battle_castle.svg"
+	elif i >= 11:
+		scene_art = "res://assets/battle_dullahan.svg"
+	add_art_panel(box, scene_art, 158, "AXEL • CENA %02d" % (i + 1))
 	var cast = [0, 1]
 	if i >= 3:
 		cast.append(3)
@@ -504,7 +618,7 @@ func show_scene(i: int):
 		idle.tween_property(portrait, "scale", Vector2(1.035, 1.035), 0.9).set_trans(Tween.TRANS_SINE)
 		idle.tween_property(portrait, "scale", Vector2(0.99, 0.99), 0.9).set_trans(Tween.TRANS_SINE)
 	text(box, STORY[i], 27)
-	text(box, "A história é apresentada em cenas ilustradas e diálogos originais.", 16)
+	text(box, "Cenas ilustradas originais — sem reproduzir trechos do anime.", 16)
 	if i == STORY.size() - 1:
 		add_button(box, "Ver aparição de Beldia", func():
 			progress = maxi(progress, i + 1)
@@ -600,6 +714,12 @@ func battle_screen(message: String):
 	battle_enemy_panel = null
 	clear_screen("Batalha em Axel", false)
 	var arena = add_section(root, "⚔  %s" % enemy.to_upper())
+	var battle_art = "res://assets/battle_field.svg"
+	if stage >= 5 and stage < 9:
+		battle_art = "res://assets/battle_forest.svg"
+	elif stage >= 9:
+		battle_art = "res://assets/battle_castle.svg"
+	add_art_panel(arena, battle_art, 142, "CAMPO DE BATALHA • AXEL")
 	var stats = HBoxContainer.new()
 	arena.add_child(stats)
 	text(stats, "INIMIGO  HP %d / %d" % [battle_hp, battle_max], 20)
@@ -608,7 +728,6 @@ func battle_screen(message: String):
 	bar.value = battle_hp
 	bar.custom_minimum_size = Vector2(0, 22)
 	arena.add_child(bar)
-
 	var combatants = HBoxContainer.new()
 	combatants.alignment = BoxContainer.ALIGNMENT_CENTER
 	combatants.add_theme_constant_override("separation", 16)
@@ -633,7 +752,6 @@ func battle_screen(message: String):
 	foe_label.add_theme_color_override("font_color", INK)
 	foe_label.add_theme_font_size_override("font_size", 22)
 	foe.add_child(foe_label)
-
 	text(arena, "EQUIPE HP %d   •   ENERGIA %d   •   TURNO %d" % [party_hp, mana, turn + 1], 19)
 	text(arena, message, 19)
 	var row = HBoxContainer.new()
@@ -699,10 +817,12 @@ func attack(i: int, special: bool):
 	battle_screen("%s causou %d de dano. O inimigo contra-atacou." % [HEROES[i], damage])
 
 func show_banner():
-	clear_screen("Summon 3D • Banner da Megumin")
-	var box = add_section(root, "★★★★★  MEGUMIN — ARQUIMAGA CARMESIM")
+	clear_screen("Summon 3D • Banner especial")
+	var box = add_section(root, "RITUAL DE INVOCAÇÃO")
+	add_character_banner(box, "AQUA • BÊNÇÃO DA DEUSA", "A deusa Aqua acompanha sua invocação. Boa sorte, aventureiro!", 1, "res://assets/banner_summon_aqua.svg", 174)
+	var featured = add_section(root, "PERSONAGEM EM DESTAQUE • SSR")
 	var row = HBoxContainer.new()
-	box.add_child(row)
+	featured.add_child(row)
 	add_character_sprite(row, 3, Vector2(170, 205))
 	var info = VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -712,10 +832,10 @@ func show_banner():
 	text(info, "Garantia de Megumin na 100ª invocação.", 18)
 	text(info, "Piedade: %d / 100" % pity, 20)
 	var actions = HBoxContainer.new()
-	box.add_child(actions)
-	add_button(actions, "1 INVOCação • 300 ◆", summon.bind(1), Vector2(0, 64))
-	add_button(actions, "10 INVocações • 3000 ◆", summon.bind(10), Vector2(0, 64))
-	add_button(box, "Prévia gratuita da summon 3D", func(): cinematic([3], true), Vector2(0, 54))
+	featured.add_child(actions)
+	add_button(actions, "1 INVOCAÇÃO • 300 ◆", summon.bind(1), Vector2(0, 64))
+	add_button(actions, "10 INVOCAÇÕES • 3000 ◆", summon.bind(10), Vector2(0, 64))
+	add_button(featured, "Prévia gratuita da summon 3D", func(): cinematic([3], true), Vector2(0, 54))
 
 func summon(n: int):
 	if busy:
