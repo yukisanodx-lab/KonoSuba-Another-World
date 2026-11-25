@@ -57,7 +57,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: beta-${{ github.run_number }}
-          name: KonoSuba: Another World - Beta ${{ github.run_number }}
+          name: "KonoSuba: Another World - Beta ${{ github.run_number }}"
           body: |
             Beta Android do KonoSuba: Another World.
             Baixe o arquivo APK abaixo e instale no Android.
