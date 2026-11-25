@@ -181,7 +181,7 @@ func character_texture(id: int) -> Texture2D:
 		return null
 	var atlas = AtlasTexture.new()
 	atlas.atlas = PARTY_ATLAS
-	atlas.region = Rect2(SPRITE_INDEX[id] * 224, 0, 224, 256)
+	atlas.region = Rect2(SPRITE_INDEX[id] * 112, 0, 112, 128)
 	return atlas
 
 func add_character_sprite(parent: Node, id: int, size: Vector2 = Vector2(150, 190)):
