@@ -6,7 +6,7 @@ on:
     paths-ignore:
       - '**.md'
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -53,3 +53,15 @@ jobs:
           name: KonoSuba-Another-World-APK
           path: build/KonoSuba-Another-World.apk
           if-no-files-found: error
+      - name: Publish direct APK download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: beta-${{ github.run_number }}
+          name: KonoSuba: Another World - Beta ${{ github.run_number }}
+          body: |
+            Beta Android do KonoSuba: Another World.
+            Baixe o arquivo APK abaixo e instale no Android.
+          files: build/KonoSuba-Another-World.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
