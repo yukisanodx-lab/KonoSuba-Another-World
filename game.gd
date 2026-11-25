@@ -46,6 +46,8 @@ var unlocked_titles = ["Aventureiro de Axel", "Abençoado pela Deusa Aqua"]
 var last_daily_claim = ""
 var music_enabled = true
 var bgm_player: AudioStreamPlayer
+var battle_sprites: Dictionary = {}
+var battle_enemy_panel: Control
 var root: VBoxContainer
 var battle_hp = 0
 var battle_max = 0
@@ -485,8 +487,24 @@ func show_story():
 
 func show_scene(i: int):
 	clear_screen(CHAPTERS[int(i / 2)])
-	var box = add_section(root, "DIÁRIO DE AVENTURA")
-	text(box, STORY[i], 30)
+	var box = add_section(root, "CENA ILUSTRADA • DIÁRIO DE AVENTURA")
+	var cast = [0, 1]
+	if i >= 3:
+		cast.append(3)
+	if i >= 5:
+		cast.append(2)
+	var scene_row = HBoxContainer.new()
+	scene_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	scene_row.add_theme_constant_override("separation", 12)
+	box.add_child(scene_row)
+	for hero_id in cast:
+		var portrait = add_character_sprite(scene_row, hero_id, Vector2(104, 120))
+		portrait.pivot_offset = Vector2(52, 60)
+		var idle = create_tween().set_loops()
+		idle.tween_property(portrait, "scale", Vector2(1.035, 1.035), 0.9).set_trans(Tween.TRANS_SINE)
+		idle.tween_property(portrait, "scale", Vector2(0.99, 0.99), 0.9).set_trans(Tween.TRANS_SINE)
+	text(box, STORY[i], 27)
+	text(box, "A história é apresentada em cenas ilustradas e diálogos originais.", 16)
 	if i == STORY.size() - 1:
 		add_button(box, "Ver aparição de Beldia", func():
 			progress = maxi(progress, i + 1)
@@ -577,6 +595,9 @@ func start_battle(i: int):
 	battle_screen("Escolha uma habilidade.")
 
 func battle_screen(message: String):
+	busy = false
+	battle_sprites.clear()
+	battle_enemy_panel = null
 	clear_screen("Batalha em Axel", false)
 	var arena = add_section(root, "⚔  %s" % enemy.to_upper())
 	var stats = HBoxContainer.new()
@@ -595,13 +616,16 @@ func battle_screen(message: String):
 	for id in team:
 		var col = VBoxContainer.new()
 		combatants.add_child(col)
-		add_character_sprite(col, int(id), Vector2(128, 140))
+		var fighter_sprite = add_character_sprite(col, int(id), Vector2(128, 140))
+		fighter_sprite.pivot_offset = Vector2(64, 70)
+		battle_sprites[int(id)] = fighter_sprite
 		var nm = text(col, HEROES[int(id)], 17)
 		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var foe = PanelContainer.new()
 	foe.custom_minimum_size = Vector2(160, 140)
 	foe.add_theme_stylebox_override("panel", panel_style(Color("#d7bd8e"), RED))
 	combatants.add_child(foe)
+	battle_enemy_panel = foe
 	var foe_label = Label.new()
 	foe_label.text = "☠\n" + enemy
 	foe_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -626,10 +650,27 @@ func battle_screen(message: String):
 	add_button(arena, "Recuar", show_story, Vector2(0, 48))
 
 func attack(i: int, special: bool):
-	if not fighting:
+	if not fighting or busy:
 		return
 	if special and mana < 2:
 		return
+	busy = true
+	var attacker = battle_sprites.get(i)
+	if attacker != null:
+		var lunge = create_tween()
+		lunge.tween_property(attacker, "scale", Vector2(1.22, 1.22), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		lunge.parallel().tween_property(attacker, "rotation", -0.08, 0.12)
+		lunge.tween_property(attacker, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_SINE)
+		lunge.parallel().tween_property(attacker, "rotation", 0.0, 0.16)
+		await lunge.finished
+	if not fighting:
+		busy = false
+		return
+	if is_instance_valid(battle_enemy_panel):
+		var impact = create_tween()
+		impact.tween_property(battle_enemy_panel, "modulate", Color(1.0, 0.55, 0.48), 0.07)
+		impact.tween_property(battle_enemy_panel, "modulate", Color.WHITE, 0.14)
+		await impact.finished
 	var damage = POWER[i] + int(levels[i]) * 4 + rng.randi_range(0, 8)
 	if special:
 		mana -= 2
@@ -639,6 +680,7 @@ func attack(i: int, special: bool):
 	battle_hp = maxi(0, battle_hp - damage)
 	turn += 1
 	if battle_hp == 0:
+		busy = false
 		fighting = false
 		complete(stage)
 		return
@@ -646,12 +688,14 @@ func attack(i: int, special: bool):
 		party_hp += 35
 	party_hp -= 15 + stage * 2
 	if party_hp <= 0:
+		busy = false
 		fighting = false
 		clear_screen("Derrota")
 		var box = add_section(root, "A EQUIPE FOI DERROTADA")
 		text(box, "Tente novamente e ajuste sua equipe.", 23)
 		add_button(box, "Tentar novamente", start_battle.bind(stage))
 		return
+	busy = false
 	battle_screen("%s causou %d de dano. O inimigo contra-atacou." % [HEROES[i], damage])
 
 func show_banner():
