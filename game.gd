@@ -44,6 +44,8 @@ var profile_icon = 1
 var profile_title = "Abençoado pela Deusa Aqua"
 var unlocked_titles = ["Aventureiro de Axel", "Abençoado pela Deusa Aqua"]
 var last_daily_claim = ""
+var music_enabled = true
+var bgm_player: AudioStreamPlayer
 var root: VBoxContainer
 var battle_hp = 0
 var battle_max = 0
@@ -59,12 +61,13 @@ var rng = RandomNumberGenerator.new()
 func _ready():
 	rng.randomize()
 	load_game()
+	start_background_music()
 	show_splash()
 
 func store():
 	var f = FileAccess.open(SAVE, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"crystals": crystals, "progress": progress, "pity": pity, "owned": owned, "levels": levels, "team": team, "coins": coins, "profile_name": profile_name, "profile_icon": profile_icon, "profile_title": profile_title, "unlocked_titles": unlocked_titles, "last_daily_claim": last_daily_claim}))
+		f.store_string(JSON.stringify({"crystals": crystals, "progress": progress, "pity": pity, "owned": owned, "levels": levels, "team": team, "coins": coins, "profile_name": profile_name, "profile_icon": profile_icon, "profile_title": profile_title, "unlocked_titles": unlocked_titles, "last_daily_claim": last_daily_claim, "music_enabled": music_enabled}))
 
 func load_game():
 	if not FileAccess.file_exists(SAVE):
@@ -84,6 +87,7 @@ func load_game():
 		profile_title = str(d.get("profile_title", "Abençoado pela Deusa Aqua"))
 		unlocked_titles = d.get("unlocked_titles", ["Aventureiro de Axel", "Abençoado pela Deusa Aqua"])
 		last_daily_claim = str(d.get("last_daily_claim", ""))
+		music_enabled = bool(d.get("music_enabled", true))
 	if not unlocked_titles.has("Abençoado pela Deusa Aqua"):
 		unlocked_titles.append("Abençoado pela Deusa Aqua")
 	if not unlocked_titles.has(profile_title):
@@ -374,11 +378,34 @@ func show_splash():
 	layout.add_child(foot)
 
 func start_from_splash():
-	if DisplayServer.tts_is_speech_supported():
-		var voices = DisplayServer.tts_get_voices_for_language("pt_BR")
-		var voice_name = str(voices[0]) if not voices.is_empty() else ""
-		DisplayServer.tts_speak("KonoSuba: Another World", voice_name, 90, 1.08, 0.94, 1)
+	var voices = DisplayServer.tts_get_voices_for_language("pt")
+	if voices.is_empty():
+		voices = DisplayServer.tts_get_voices_for_language("pt_BR")
+	if not voices.is_empty():
+		DisplayServer.tts_speak("KonoSuba: Another World", voices[0], 90, 1.08, 0.94, 1, true)
 	show_team_setup()
+
+func start_background_music():
+	bgm_player = AudioStreamPlayer.new()
+	bgm_player.name = "OriginalFantasyTheme"
+	get_tree().root.add_child(bgm_player)
+	var music = load("res://assets/title_theme.wav")
+	if music is AudioStreamWAV:
+		music.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		bgm_player.stream = music
+		bgm_player.volume_db = -13.0
+		if music_enabled:
+			bgm_player.play()
+
+func toggle_music():
+	music_enabled = not music_enabled
+	if bgm_player != null:
+		if music_enabled:
+			bgm_player.play()
+		else:
+			bgm_player.stop()
+	store()
+	show_home()
 
 func show_home():
 	busy = false
@@ -414,6 +441,9 @@ func show_home():
 	nav.add_child(row3)
 	add_button(row3, "MEU PERFIL", show_profile, Vector2(0, 58))
 	add_button(row3, "EDITAR EQUIPE", show_team_setup, Vector2(0, 58))
+	var row4 = HBoxContainer.new()
+	nav.add_child(row4)
+	add_button(row4, "MÚSICA: LIGADA" if music_enabled else "MÚSICA: DESLIGADA", toggle_music, Vector2(0, 52))
 	text(root, "Progresso da história: %d / %d fases" % [progress, STORY.size()], 18)
 
 func daily():
