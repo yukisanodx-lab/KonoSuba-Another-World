@@ -323,7 +323,7 @@ func _play_slash(hero_id: int) -> void:
 	effect.queue_free()
 
 func _play_special(hero_id: int) -> void:
-	var color := HERO_TRIM[hero_id]
+	var color: Color = HERO_TRIM[hero_id]
 	if hero_id == 3:
 		color = Color("#ff623b")
 	var center := enemy_node.position + Vector3(0.0, 1.2, 0.3)
