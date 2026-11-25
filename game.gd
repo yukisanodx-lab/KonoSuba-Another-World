@@ -48,7 +48,7 @@ var music_enabled = true
 var bgm_player: AudioStreamPlayer
 var current_music_path = ""
 var battle_sprites: Dictionary = {}
-var battle_3d_view: Control
+var battle_3d_view
 var battle_enemy_panel: Control
 var root: VBoxContainer
 var battle_hp = 0
