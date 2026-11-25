@@ -127,8 +127,8 @@ func _build_arena(stage_id: int) -> void:
 
 	for side in [-1.0, 1.0]:
 		for index in range(3):
-			var x := side * (6.3 + float(index % 2) * 0.5)
-			var z := -3.2 + float(index) * 2.6
+			var x: float = side * (6.3 + float(index % 2) * 0.5)
+			var z: float = -3.2 + float(index) * 2.6
 			if forest or night:
 				_make_tree(Vector3(x, 0.0, z), Color("#355a43") if not night else Color("#252c42"))
 			elif ruins:
@@ -237,7 +237,8 @@ func _make_hero(hero_id: int) -> Node3D:
 			_add_mesh(root, SphereMesh.new(), Color("#e3c16c"), Vector3(side * 0.37, 1.57, 0.0), Vector3(0.22, 0.18, 0.25))
 		_add_mesh(root, BoxMesh.new(), Color("#d4b36c"), Vector3(0.0, 1.15, 0.28), Vector3(0.66, 0.42, 0.12))
 	elif hero_id == 3:
-		var hat := ConeMesh.new()
+		var hat := CylinderMesh.new()
+		hat.top_radius = 0.0
 		hat.bottom_radius = 0.48
 		hat.height = 0.72
 		_add_mesh(root, hat, Color("#2c2436"), Vector3(0.0, 2.48, 0.0), Vector3(1.0, 1.0, 1.0))
@@ -247,6 +248,13 @@ func _make_hero(hero_id: int) -> Node3D:
 		_add_mesh(root, SphereMesh.new(), Color("#d84b37"), Vector3(0.62, 1.98, 0.0), Vector3(0.14, 0.14, 0.14))
 
 	return root
+
+func _cone_mesh(radius: float, height: float) -> CylinderMesh:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.0
+	mesh.bottom_radius = radius
+	mesh.height = height
+	return mesh
 
 func _make_enemy(enemy_name: String, stage_id: int) -> Node3D:
 	var root := Node3D.new()
@@ -263,8 +271,8 @@ func _make_enemy(enemy_name: String, stage_id: int) -> Node3D:
 	elif lower.contains("lobo"):
 		_add_mesh(root, SphereMesh.new(), Color("#777b86"), Vector3(0.0, 1.0, 0.0), Vector3(1.1, 0.52, 0.48))
 		_add_mesh(root, SphereMesh.new(), Color("#858b98"), Vector3(0.0, 1.25, 0.5), Vector3(0.48, 0.42, 0.5))
-		_add_mesh(root, ConeMesh.new(), Color("#626873"), Vector3(-0.28, 1.65, 0.45), Vector3(0.55, 0.75, 0.55))
-		_add_mesh(root, ConeMesh.new(), Color("#626873"), Vector3(0.28, 1.65, 0.45), Vector3(0.55, 0.75, 0.55))
+		_add_mesh(root, _cone_mesh(0.38, 0.72), Color("#626873"), Vector3(-0.28, 1.65, 0.45), Vector3(0.55, 0.75, 0.55))
+		_add_mesh(root, _cone_mesh(0.38, 0.72), Color("#626873"), Vector3(0.28, 1.65, 0.45), Vector3(0.55, 0.75, 0.55))
 		for side in [-1.0, 1.0]:
 			_add_capsule(root, 0.12, 0.72, Color("#5e6571"), Vector3(side * 0.62, 0.42, 0.0))
 			_add_mesh(root, SphereMesh.new(), Color("#d8c3a0"), Vector3(side * 0.13, 1.3, 0.88), Vector3(0.045, 0.045, 0.035))
@@ -276,7 +284,7 @@ func _make_enemy(enemy_name: String, stage_id: int) -> Node3D:
 			_add_capsule(root, 0.15, 0.78, Color("#464253"), Vector3(side * 0.55, 1.25, 0.0))
 			_add_capsule(root, 0.18, 0.82, Color("#292a3a"), Vector3(side * 0.2, 0.45, 0.0))
 		_add_capsule(root, 0.055, 1.55, Color("#75624e"), Vector3(0.78, 1.2, 0.0), Vector3(0.0, 0.0, -0.2))
-		_add_mesh(root, ConeMesh.new(), Color("#a4a0a5"), Vector3(0.78, 2.05, 0.0), Vector3(0.55, 0.8, 0.55))
+		_add_mesh(root, _cone_mesh(0.25, 0.5), Color("#a4a0a5"), Vector3(0.78, 2.05, 0.0), Vector3(0.55, 0.8, 0.55))
 	else:
 		_add_mesh(root, BoxMesh.new(), Color("#777b83"), Vector3(0.0, 1.0, 0.0), Vector3(1.25, 1.35, 0.85))
 		_add_mesh(root, SphereMesh.new(), Color("#92969e"), Vector3(0.0, 1.95, 0.0), Vector3(0.48, 0.48, 0.48))
@@ -302,7 +310,7 @@ func play_attack(hero_id: int, special: bool) -> void:
 	await _hit_enemy()
 
 func _play_slash(hero_id: int) -> void:
-	var color := HERO_TRIM[hero_id]
+	var color: Color = HERO_TRIM[hero_id]
 	var slash := TorusMesh.new()
 	slash.inner_radius = 0.34
 	slash.outer_radius = 0.43
