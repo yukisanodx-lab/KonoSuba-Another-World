@@ -48,6 +48,7 @@ var music_enabled = true
 var bgm_player: AudioStreamPlayer
 var current_music_path = ""
 var battle_sprites: Dictionary = {}
+var battle_3d_view: Control
 var battle_enemy_panel: Control
 var root: VBoxContainer
 var battle_hp = 0
@@ -209,6 +210,7 @@ func character_texture(id: int) -> Texture2D:
 
 func add_character_sprite(parent: Node, id: int, size: Vector2 = Vector2(150, 190)):
 	var frame = PanelContainer.new()
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.custom_minimum_size = size
 	frame.add_theme_stylebox_override("panel", panel_style(Color("#ead9b2"), Color("#9a6336")))
 	parent.add_child(frame)
@@ -265,15 +267,25 @@ func add_art_panel(parent: Node, art_path: String, height: float = 160.0, captio
 	return frame
 
 func add_character_banner(parent: Node, heading: String, subtitle: String, hero_id: int, art_path: String, height: float = 142.0, action_label: String = "", callback: Callable = Callable()) -> Control:
-	var banner = PanelContainer.new()
+	var banner = Button.new()
 	banner.custom_minimum_size = Vector2(0, height)
 	banner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	banner.add_theme_stylebox_override("panel", panel_style(Color("#1d2b4a"), GOLD))
+	banner.focus_mode = Control.FOCUS_NONE
+	banner.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	banner.add_theme_stylebox_override("normal", panel_style(Color("#1d2b4a"), GOLD))
+	banner.add_theme_stylebox_override("hover", panel_style(Color("#294a75"), Color("#e1b55e")))
+	banner.add_theme_stylebox_override("pressed", panel_style(Color("#14213b"), Color("#e1b55e")))
+	if callback.is_valid():
+		banner.pressed.connect(callback)
+	else:
+		banner.disabled = true
 	parent.add_child(banner)
 	var surface = Control.new()
-	surface.custom_minimum_size = Vector2(0, height)
+	surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	surface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	banner.add_child(surface)
 	var backdrop = TextureRect.new()
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	backdrop.texture = load(art_path)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -281,23 +293,28 @@ func add_character_banner(parent: Node, heading: String, subtitle: String, hero_
 	backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	surface.add_child(backdrop)
 	var shade = ColorRect.new()
-	shade.color = Color(0.02, 0.04, 0.12, 0.42)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shade.color = Color(0.02, 0.04, 0.12, 0.38)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	surface.add_child(shade)
 	var margin = MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for key in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
 		margin.add_theme_constant_override(key, 8)
 	surface.add_child(margin)
 	var row = HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 12)
 	margin.add_child(row)
 	add_character_sprite(row, hero_id, Vector2(96, height - 18))
 	var info = VBoxContainer.new()
+	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(info)
 	var title_label = Label.new()
+	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_label.text = heading
 	title_label.add_theme_font_size_override("font_size", 23)
 	title_label.add_theme_color_override("font_color", Color("#fff1d2"))
@@ -305,14 +322,21 @@ func add_character_banner(parent: Node, heading: String, subtitle: String, hero_
 	title_label.add_theme_constant_override("outline_size", 4)
 	info.add_child(title_label)
 	var detail = Label.new()
+	detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	detail.text = subtitle
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail.add_theme_font_size_override("font_size", 16)
 	detail.add_theme_color_override("font_color", Color("#fff5df"))
 	info.add_child(detail)
-	if not action_label.is_empty() and callback.is_valid():
-		add_button(info, action_label, callback, Vector2(0, 42))
+	if not action_label.is_empty():
+		var action = Label.new()
+		action.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		action.text = "▶  " + action_label
+		action.add_theme_font_size_override("font_size", 17)
+		action.add_theme_color_override("font_color", Color("#ffe08a"))
+		info.add_child(action)
 	return banner
+
 func show_profile():
 	clear_screen("Perfil do aventureiro")
 	var box = add_section(root, "IDENTIDADE DO AVENTUREIRO")
@@ -713,74 +737,63 @@ func toggle_team(i: int):
 
 func start_battle(i: int):
 	stage = i
-	enemy = "Sapo gigante" if i < 6 else ("Lobo da floresta" if i < 9 else "Guardião das ruínas")
+	if i >= 11:
+		enemy = "Beldia • General do Rei Demônio"
+	elif i < 6:
+		enemy = "Sapo gigante"
+	elif i < 9:
+		enemy = "Lobo da floresta"
+	else:
+		enemy = "Guardião das ruínas"
 	battle_max = 110 + i * 18
 	battle_hp = battle_max
 	party_hp = 160 + team.size() * 55
 	mana = 3
 	turn = 0
 	fighting = true
-	battle_screen("Escolha uma habilidade.")
+	battle_screen("Escolha um personagem e uma ação.")
 
 func battle_screen(message: String):
 	play_music("res://assets/battle_theme.wav")
 	busy = false
 	battle_sprites.clear()
 	battle_enemy_panel = null
-	clear_screen("Batalha em Axel", false)
+	battle_3d_view = null
+	clear_screen("Batalha 3D • Axel", false)
 	var arena = add_section(root, "⚔  %s" % enemy.to_upper())
-	var battle_art = "res://assets/battle_field.svg"
-	if stage >= 5 and stage < 9:
-		battle_art = "res://assets/battle_forest.svg"
-	elif stage >= 9:
-		battle_art = "res://assets/battle_castle.svg"
-	add_art_panel(arena, battle_art, 142, "CAMPO DE BATALHA • AXEL")
-	var stats = HBoxContainer.new()
-	arena.add_child(stats)
-	text(stats, "INIMIGO  HP %d / %d" % [battle_hp, battle_max], 20)
+	var view = load("res://battle_3d.gd").new()
+	view.custom_minimum_size = Vector2(0, 300)
+	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	arena.add_child(view)
+	battle_3d_view = view
+	view.setup(team, stage, enemy)
+	var status = add_section(root, "STATUS DA BATALHA")
+	text(status, "INIMIGO  •  HP %d / %d" % [battle_hp, battle_max], 18)
 	var bar = ProgressBar.new()
 	bar.max_value = battle_max
 	bar.value = battle_hp
-	bar.custom_minimum_size = Vector2(0, 22)
-	arena.add_child(bar)
-	var combatants = HBoxContainer.new()
-	combatants.alignment = BoxContainer.ALIGNMENT_CENTER
-	combatants.add_theme_constant_override("separation", 16)
-	arena.add_child(combatants)
+	bar.custom_minimum_size = Vector2(0, 18)
+	status.add_child(bar)
+	text(status, "EQUIPE HP %d   •   ENERGIA %d   •   TURNO %d" % [party_hp, mana, turn + 1], 17)
+	text(status, message, 16)
+	var attacks = HBoxContainer.new()
+	attacks.add_theme_constant_override("separation", 8)
+	status.add_child(attacks)
 	for id in team:
-		var col = VBoxContainer.new()
-		combatants.add_child(col)
-		var fighter_sprite = add_character_sprite(col, int(id), Vector2(128, 140))
-		fighter_sprite.pivot_offset = Vector2(64, 70)
-		battle_sprites[int(id)] = fighter_sprite
-		var nm = text(col, HEROES[int(id)], 17)
-		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var foe = PanelContainer.new()
-	foe.custom_minimum_size = Vector2(160, 140)
-	foe.add_theme_stylebox_override("panel", panel_style(Color("#d7bd8e"), RED))
-	combatants.add_child(foe)
-	battle_enemy_panel = foe
-	var foe_label = Label.new()
-	foe_label.text = "☠\n" + enemy
-	foe_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	foe_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	foe_label.add_theme_color_override("font_color", INK)
-	foe_label.add_theme_font_size_override("font_size", 22)
-	foe.add_child(foe_label)
-	text(arena, "EQUIPE HP %d   •   ENERGIA %d   •   TURNO %d" % [party_hp, mana, turn + 1], 19)
-	text(arena, message, 19)
-	var row = HBoxContainer.new()
-	arena.add_child(row)
+		var hero_id = int(id)
+		add_button(attacks, "ATACAR • " + HEROES[hero_id], attack.bind(hero_id, false), Vector2(0, 52))
+	var skills = HBoxContainer.new()
+	skills.add_theme_constant_override("separation", 8)
+	status.add_child(skills)
 	for id in team:
-		var i = int(id)
-		add_button(row, HEROES[i] + " • Ataque", attack.bind(i, false), Vector2(0, 62))
-	var special = HBoxContainer.new()
-	arena.add_child(special)
-	for id in team:
-		var i = int(id)
-		var b = add_button(special, ("EXPLOSION!" if i == 3 else HEROES[i] + " • Técnica"), attack.bind(i, true), Vector2(0, 62))
-		b.disabled = mana < 2
-	add_button(arena, "Recuar", show_story, Vector2(0, 48))
+		var hero_id = int(id)
+		var label = "EXPLOSION!" if hero_id == 3 else "TÉCNICA • " + HEROES[hero_id]
+		var skill_button = add_button(skills, label, attack.bind(hero_id, true), Vector2(0, 52))
+		skill_button.disabled = mana < 2
+	var guard = add_button(status, "DEFENDER • REDUZIR O PRÓXIMO DANO", defend, Vector2(0, 44))
+	guard.add_theme_font_size_override("font_size", 16)
+	add_button(status, "RECUAR PARA A HISTÓRIA", show_story, Vector2(0, 42))
 
 func attack(i: int, special: bool):
 	if not fighting or busy:
@@ -788,22 +801,11 @@ func attack(i: int, special: bool):
 	if special and mana < 2:
 		return
 	busy = true
-	var attacker = battle_sprites.get(i)
-	if attacker != null:
-		var lunge = create_tween()
-		lunge.tween_property(attacker, "scale", Vector2(1.22, 1.22), 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		lunge.parallel().tween_property(attacker, "rotation", -0.08, 0.12)
-		lunge.tween_property(attacker, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_SINE)
-		lunge.parallel().tween_property(attacker, "rotation", 0.0, 0.16)
-		await lunge.finished
+	if is_instance_valid(battle_3d_view):
+		await battle_3d_view.play_attack(i, special)
 	if not fighting:
 		busy = false
 		return
-	if is_instance_valid(battle_enemy_panel):
-		var impact = create_tween()
-		impact.tween_property(battle_enemy_panel, "modulate", Color(1.0, 0.55, 0.48), 0.07)
-		impact.tween_property(battle_enemy_panel, "modulate", Color.WHITE, 0.14)
-		await impact.finished
 	var damage = POWER[i] + int(levels[i]) * 4 + rng.randi_range(0, 8)
 	if special:
 		mana -= 2
@@ -815,10 +817,15 @@ func attack(i: int, special: bool):
 	if battle_hp == 0:
 		busy = false
 		fighting = false
+		if is_instance_valid(battle_3d_view):
+			await battle_3d_view.play_victory()
 		complete(stage)
 		return
 	if special and i == 1:
 		party_hp += 35
+	var target_id = int(team[rng.randi_range(0, team.size() - 1)])
+	if is_instance_valid(battle_3d_view):
+		await battle_3d_view.play_enemy_attack(target_id)
 	party_hp -= 15 + stage * 2
 	if party_hp <= 0:
 		busy = false
@@ -831,6 +838,27 @@ func attack(i: int, special: bool):
 	busy = false
 	battle_screen("%s causou %d de dano. O inimigo contra-atacou." % [HEROES[i], damage])
 
+
+func defend():
+	if not fighting or busy:
+		return
+	busy = true
+	turn += 1
+	var target_id = int(team[rng.randi_range(0, team.size() - 1)])
+	if is_instance_valid(battle_3d_view):
+		await battle_3d_view.play_enemy_attack(target_id)
+	party_hp -= maxi(5, int((15 + stage * 2) * 0.45))
+	mana = mini(5, mana + 1)
+	if party_hp <= 0:
+		busy = false
+		fighting = false
+		clear_screen("Derrota")
+		var box = add_section(root, "A EQUIPE FOI DERROTADA")
+		text(box, "Tente novamente e ajuste sua equipe.", 23)
+		add_button(box, "Tentar novamente", start_battle.bind(stage))
+		return
+	busy = false
+	battle_screen("A equipe se defendeu e reduziu o dano recebido.")
 func show_banner():
 	play_music("res://assets/summon_theme.wav")
 	clear_screen("Summon 3D • Banner especial")
