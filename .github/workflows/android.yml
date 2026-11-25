@@ -52,6 +52,7 @@ jobs:
         run: |
           godot --headless --editor --import --path .
           godot --headless --path . --script res://game.gd --check-only
+          godot --headless --path . --script res://battle_3d.gd --check-only
       - name: Export Android APK
         run: |
           mkdir -p build
