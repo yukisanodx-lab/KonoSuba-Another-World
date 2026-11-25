@@ -39,6 +39,11 @@ var owned = [0, 1]
 var levels = [1, 1, 1, 1, 1, 1]
 var team = [0, 1]
 var coins = 100
+var profile_name = "Aventureiro"
+var profile_icon = 1
+var profile_title = "Abençoado pela Deusa Aqua"
+var unlocked_titles = ["Aventureiro de Axel", "Abençoado pela Deusa Aqua"]
+var last_daily_claim = ""
 var root: VBoxContainer
 var battle_hp = 0
 var battle_max = 0
@@ -54,12 +59,12 @@ var rng = RandomNumberGenerator.new()
 func _ready():
 	rng.randomize()
 	load_game()
-	show_home()
+	show_splash()
 
 func store():
 	var f = FileAccess.open(SAVE, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"crystals": crystals, "progress": progress, "pity": pity, "owned": owned, "levels": levels, "team": team, "coins": coins}))
+		f.store_string(JSON.stringify({"crystals": crystals, "progress": progress, "pity": pity, "owned": owned, "levels": levels, "team": team, "coins": coins, "profile_name": profile_name, "profile_icon": profile_icon, "profile_title": profile_title, "unlocked_titles": unlocked_titles, "last_daily_claim": last_daily_claim}))
 
 func load_game():
 	if not FileAccess.file_exists(SAVE):
@@ -74,6 +79,17 @@ func load_game():
 		owned = d.get("owned", [0, 1])
 		levels = d.get("levels", [1, 1, 1, 1, 1, 1])
 		team = d.get("team", [0, 1])
+		profile_name = str(d.get("profile_name", "Aventureiro"))
+		profile_icon = int(d.get("profile_icon", 1))
+		profile_title = str(d.get("profile_title", "Abençoado pela Deusa Aqua"))
+		unlocked_titles = d.get("unlocked_titles", ["Aventureiro de Axel", "Abençoado pela Deusa Aqua"])
+		last_daily_claim = str(d.get("last_daily_claim", ""))
+	if not unlocked_titles.has("Abençoado pela Deusa Aqua"):
+		unlocked_titles.append("Abençoado pela Deusa Aqua")
+	if not unlocked_titles.has(profile_title):
+		profile_title = "Abençoado pela Deusa Aqua"
+	if not owned.has(profile_icon):
+		profile_icon = int(owned[0]) if not owned.is_empty() else 0
 
 func panel_style(color: Color = PAPER, border_color: Color = GOLD) -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
@@ -209,6 +225,161 @@ func add_character_sprite(parent: Node, id: int, size: Vector2 = Vector2(150, 19
 		frame.add_child(placeholder)
 	return frame
 
+func show_profile():
+	clear_screen("Perfil do aventureiro")
+	var box = add_section(root, "IDENTIDADE DO AVENTUREIRO")
+	var hero_row = HBoxContainer.new()
+	hero_row.add_theme_constant_override("separation", 14)
+	box.add_child(hero_row)
+	add_character_sprite(hero_row, profile_icon, Vector2(116, 132))
+	var identity = VBoxContainer.new()
+	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hero_row.add_child(identity)
+	text(identity, profile_name, 25)
+	text(identity, profile_title, 19)
+	text(identity, "Progresso: %d / %d missões" % [progress, STORY.size()], 17)
+
+	text(box, "NOME DO AVENTUREIRO", 18)
+	var name_edit = LineEdit.new()
+	name_edit.text = profile_name
+	name_edit.placeholder_text = "Digite seu nome"
+	name_edit.max_length = 20
+	name_edit.custom_minimum_size = Vector2(0, 52)
+	box.add_child(name_edit)
+
+	text(box, "ÍCONE DE PERFIL", 18)
+	var icon_select = OptionButton.new()
+	icon_select.custom_minimum_size = Vector2(0, 52)
+	for id in owned:
+		icon_select.add_item(HEROES[int(id)], int(id))
+		if int(id) == profile_icon:
+			icon_select.select(icon_select.item_count - 1)
+	box.add_child(icon_select)
+
+	text(box, "TÍTULO EQUIPADO", 18)
+	var title_select = OptionButton.new()
+	title_select.custom_minimum_size = Vector2(0, 52)
+	for title_name in unlocked_titles:
+		title_select.add_item(str(title_name))
+		if str(title_name) == profile_title:
+			title_select.select(title_select.item_count - 1)
+	box.add_child(title_select)
+
+	add_button(box, "SALVAR PERFIL", func():
+		var clean_name = name_edit.text.strip_edges()
+		if clean_name.is_empty():
+			clean_name = "Aventureiro"
+		profile_name = clean_name
+		if icon_select.item_count > 0 and icon_select.selected >= 0:
+			profile_icon = icon_select.get_item_id(icon_select.selected)
+		if title_select.item_count > 0 and title_select.selected >= 0:
+			profile_title = title_select.get_item_text(title_select.selected)
+		store()
+		show_profile()
+	, Vector2(0, 60))
+	var title_box = add_section(root, "TÍTULOS DESBLOQUEÁVEIS")
+	for title_name in ["Aventureiro de Axel", "Abençoado pela Deusa Aqua", "Herói de Outro Mundo", "Arquimago Carmesim", "Cruzado Inabalável"]:
+		var state = "DESBLOQUEADO" if unlocked_titles.has(title_name) else "BLOQUEADO"
+		text(title_box, "%s  •  %s" % [title_name, state], 17)
+
+func show_team_setup():
+	clear_screen("Escolha sua equipe", false)
+	var box = add_section(root, "MONTE SEU GRUPO ANTES DA AVENTURA")
+	text(box, "Escolha até 3 personagens. Você pode mudar a equipe depois na guilda.", 19)
+	for id in owned:
+		var i = int(id)
+		var row = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		box.add_child(row)
+		add_character_sprite(row, i, Vector2(90, 104))
+		var info = VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+		text(info, "%s • %s • Nv. %d" % [RARITY[i], HEROES[i], levels[i]], 19)
+		var action = "REMOVER" if team.has(i) else "ADICIONAR À EQUIPE"
+		add_button(info, action, toggle_team_setup.bind(i), Vector2(0, 44))
+	text(box, "Equipe selecionada: %d / 3" % team.size(), 19)
+	var begin = add_button(box, "CONFIRMAR E COMEÇAR", show_home, Vector2(0, 64))
+	begin.disabled = team.is_empty()
+
+func toggle_team_setup(i: int):
+	if team.has(i):
+		if team.size() > 1:
+			team.erase(i)
+	elif team.size() < 3:
+		team.append(i)
+	store()
+	show_team_setup()
+
+func show_splash():
+	for child in get_children():
+		remove_child(child)
+		child.queue_free()
+	var bg = TextureRect.new()
+	bg.texture = GAME_COVER
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	add_child(bg)
+	var shade = ColorRect.new()
+	shade.color = Color(0.03, 0.05, 0.12, 0.32)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(shade)
+	var layout = VBoxContainer.new()
+	layout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layout.add_theme_constant_override("separation", 8)
+	layout.alignment = BoxContainer.ALIGNMENT_CENTER
+	add_child(layout)
+	var logo = Label.new()
+	logo.text = "KONOSUBA: ANOTHER WORLD"
+	logo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	logo.add_theme_font_size_override("font_size", 42)
+	logo.add_theme_color_override("font_color", Color("#fff1d2"))
+	logo.add_theme_color_override("font_outline_color", Color("#35203a"))
+	logo.add_theme_constant_override("outline_size", 7)
+	layout.add_child(logo)
+	var tagline = Label.new()
+	tagline.text = "Uma aventura caótica começa agora"
+	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tagline.add_theme_font_size_override("font_size", 22)
+	tagline.add_theme_color_override("font_color", Color("#fff4df"))
+	layout.add_child(tagline)
+	var gap = Control.new()
+	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	layout.add_child(gap)
+	var heroes = HBoxContainer.new()
+	heroes.alignment = BoxContainer.ALIGNMENT_CENTER
+	heroes.add_theme_constant_override("separation", 14)
+	layout.add_child(heroes)
+	for id in [1, 0, 3, 2]:
+		var frame = add_character_sprite(heroes, id, Vector2(104, 128))
+		frame.pivot_offset = Vector2(52, 64)
+		var idle = create_tween().set_loops()
+		idle.tween_property(frame, "scale", Vector2(1.045, 1.045), 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		idle.tween_property(frame, "scale", Vector2(0.98, 0.98), 0.85).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var profile_line = Label.new()
+	profile_line.text = "%s  •  %s" % [profile_name, profile_title]
+	profile_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	profile_line.add_theme_font_size_override("font_size", 17)
+	profile_line.add_theme_color_override("font_color", Color("#fff1d2"))
+	layout.add_child(profile_line)
+	var start = add_button(layout, "TOQUE NA TELA PARA COMEÇAR", start_from_splash, Vector2(0, 72))
+	start.add_theme_font_size_override("font_size", 25)
+	var foot = Label.new()
+	foot.text = "Toque para ouvir o nome do jogo"
+	foot.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	foot.add_theme_font_size_override("font_size", 15)
+	foot.add_theme_color_override("font_color", Color("#fff1d2"))
+	layout.add_child(foot)
+
+func start_from_splash():
+	if DisplayServer.tts_is_speech_supported():
+		var voices = DisplayServer.tts_get_voices_for_language("pt_BR")
+		var voice_name = str(voices[0]) if not voices.is_empty() else ""
+		DisplayServer.tts_speak("KonoSuba: Another World", voice_name, 90, 1.08, 0.94, 1)
+	show_team_setup()
+
 func show_home():
 	busy = false
 	fighting = false
@@ -216,26 +387,7 @@ func show_home():
 	var intro = add_section(root, "AXEL  •  GUILDA DOS AVENTUREIROS")
 	text(intro, "Uma nova aventura começa aqui!", 25)
 
-	var cover_row = HBoxContainer.new()
-	cover_row.add_theme_constant_override("separation", 16)
-	root.add_child(cover_row)
-	var cover_frame = PanelContainer.new()
-	cover_frame.custom_minimum_size = Vector2(150, 150)
-	cover_frame.add_theme_stylebox_override("panel", panel_style(Color("#ead9b2"), GOLD))
-	cover_row.add_child(cover_frame)
-	var cover_pic = TextureRect.new()
-	cover_pic.texture = GAME_COVER
-	cover_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	cover_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	cover_pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	cover_frame.add_child(cover_pic)
-	var cover_copy = VBoxContainer.new()
-	cover_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cover_copy.alignment = BoxContainer.ALIGNMENT_CENTER
-	cover_row.add_child(cover_copy)
-	text(cover_copy, "KONOSUBA: ANOTHER WORLD", 25)
-	text(cover_copy, "Uma aventura em RPG 2D pixel art, com invocações cinematográficas em 3D.", 20)
-	text(cover_copy, "A guilda de Axel espera por novos aventureiros.", 18)
+	text(intro, "Sua jornada começa em Axel. Escolha seu destino, aventureiro!", 23)
 
 	var party_row = HBoxContainer.new()
 	party_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -258,17 +410,32 @@ func show_home():
 	nav.add_child(row2)
 	add_button(row2, "PERSONAGENS", show_characters, Vector2(0, 64))
 	add_button(row2, "RECOMPENSA DIÁRIA", daily, Vector2(0, 64))
+	var row3 = HBoxContainer.new()
+	nav.add_child(row3)
+	add_button(row3, "MEU PERFIL", show_profile, Vector2(0, 58))
+	add_button(row3, "EDITAR EQUIPE", show_team_setup, Vector2(0, 58))
 	text(root, "Progresso da história: %d / %d fases" % [progress, STORY.size()], 18)
 
 func daily():
-	clear_screen("Recompensas")
+	clear_screen("Recompensas diárias")
 	var box = add_section(root, "BÔNUS DA GUILDA")
-	text(box, "Recompensa de teste para experimentar o sistema de invocação.")
-	add_button(box, "Receber 300 cristais", func():
-		crystals += 300
-		store()
-		show_home()
-	)
+	var today = Time.get_date_dict_from_system()
+	var date_key = "%04d-%02d-%02d" % [today.year, today.month, today.day]
+	if last_daily_claim == date_key:
+		text(box, "Você já recebeu sua recompensa de hoje. Volte amanhã!", 24)
+		text(box, "Próxima recompensa: 300 cristais + 80 eris.", 20)
+	else:
+		text(box, "A guilda preparou uma recompensa para sua visita de hoje!", 23)
+		text(box, "Recompensa: 300 cristais e 80 eris.", 21)
+		add_button(box, "RESGATAR RECOMPENSA", func():
+			if last_daily_claim != date_key:
+				crystals += 300
+				coins += 80
+				last_daily_claim = date_key
+				store()
+			daily()
+		, Vector2(0, 64))
+	text(box, "O resgate fica disponível novamente quando o dia mudar no seu celular.", 17)
 
 func show_story():
 	clear_screen("História • Axel")
@@ -317,6 +484,12 @@ func complete(i: int):
 			owned.append(2)
 			if team.size() < 3:
 				team.append(2)
+		if progress >= 6 and not unlocked_titles.has("Herói de Outro Mundo"):
+			unlocked_titles.append("Herói de Outro Mundo")
+		if owned.has(3) and not unlocked_titles.has("Arquimago Carmesim"):
+			unlocked_titles.append("Arquimago Carmesim")
+		if owned.has(2) and not unlocked_titles.has("Cruzado Inabalável"):
+			unlocked_titles.append("Cruzado Inabalável")
 	store()
 	clear_screen("Fase concluída")
 	var box = add_section(root, "MISSÃO COMPLETADA!")
