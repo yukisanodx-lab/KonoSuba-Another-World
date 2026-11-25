@@ -2,6 +2,7 @@ extends Control
 
 const SAVE = "user://adventure.json"
 const PARTY_ATLAS: Texture2D = preload("res://assets/party_atlas.png")
+const GAME_COVER: Texture2D = preload("res://assets/game_cover.jpg")
 const HEROES = ["Kazuma", "Aqua", "Darkness", "Megumin", "Chris", "Wiz"]
 const RARITY = ["R", "SR", "SR", "SSR", "R", "SR"]
 const POWER = [24, 18, 22, 42, 26, 34]
@@ -214,6 +215,27 @@ func show_home():
 	clear_screen("KonoSuba: Another World", false)
 	var intro = add_section(root, "AXEL  •  GUILDA DOS AVENTUREIROS")
 	text(intro, "Uma nova aventura começa aqui!", 25)
+
+	var cover_row = HBoxContainer.new()
+	cover_row.add_theme_constant_override("separation", 16)
+	root.add_child(cover_row)
+	var cover_frame = PanelContainer.new()
+	cover_frame.custom_minimum_size = Vector2(150, 150)
+	cover_frame.add_theme_stylebox_override("panel", panel_style(Color("#ead9b2"), GOLD))
+	cover_row.add_child(cover_frame)
+	var cover_pic = TextureRect.new()
+	cover_pic.texture = GAME_COVER
+	cover_pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	cover_pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	cover_pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	cover_frame.add_child(cover_pic)
+	var cover_copy = VBoxContainer.new()
+	cover_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cover_copy.alignment = BoxContainer.ALIGNMENT_CENTER
+	cover_row.add_child(cover_copy)
+	text(cover_copy, "KONOSUBA: ANOTHER WORLD", 25)
+	text(cover_copy, "Uma aventura em RPG 2D pixel art, com invocações cinematográficas em 3D.", 20)
+	text(cover_copy, "A guilda de Axel espera por novos aventureiros.", 18)
 
 	var party_row = HBoxContainer.new()
 	party_row.alignment = BoxContainer.ALIGNMENT_CENTER
