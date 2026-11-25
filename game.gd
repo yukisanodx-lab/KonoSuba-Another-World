@@ -735,6 +735,10 @@ func summon(n: int):
 			coins += 25
 		else:
 			owned.append(i)
+			if i == 3 and not unlocked_titles.has("Arquimago Carmesim"):
+				unlocked_titles.append("Arquimago Carmesim")
+			if i == 2 and not unlocked_titles.has("Cruzado Inabalável"):
+				unlocked_titles.append("Cruzado Inabalável")
 		results.append(i)
 	store()
 	cinematic(results, false)
